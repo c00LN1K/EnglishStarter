@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+{{super()}}
+    {% for cat, m in get_flashed_messages(True) %}
+    <div class="flash {{cat}}">{{m}}</div>
+    {% endfor %}
+     <form action='' method='post'>
+        <p>{{form.hidden_tag()}}</p>
+        {% for field in form  if field.name not in ['csrf_token', 'submit', 'remember'] %}
+            <p>{{ field.label() }}</p>
+            {% if field.errors %}
+            {{field(class='failed_field')}}
+            <div class="failed">
+                {% for error in field.errors %}
+                {{ error }}
+                {% endfor %}
+            </div>
+            {% else %}
+                {{field()}}
+            {% endif %}
+        {% endfor %}
+         <p>{{form.remember.label()}} {{form.remember()}}</p>
+        <p>{{form.submit}}</p>
+    </form>
+    <hr>
+    <p>Если вы еще вдруг не зарегистрированы, то пройдите <a href="{{url_for('register')}}">регистрацию</a></p>
+</div>
+
+
+{% endblock %}

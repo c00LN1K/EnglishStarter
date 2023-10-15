@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block content %}
+{{super()}}
+<h2>Переведите слово на английский:</h2>
+    <p>{{ word.capitalize() }}</p>
+    <form action="/exercise" method="post">
+        <label for="answer">Ваш ответ:</label>
+        <input type="text" id="answer" name="answer" required>
+        <input type="hidden" name="word" value="{{ answer }}">
+        <button type="submit">Проверить</button>
+    </form>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <ul class="flash-messages">
+                {% for message in messages %}
+                    <li>{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+{% endblock %}

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{title}}</title>
+</head>
+<body>
+    <h1>{{title}}</h1>
+    {% block content -%}
+    <nav>
+        <ul>
+            {% for item in menu %}
+            <li><a href="{{url_for(item.url)}}">{{item.title}}</a></li>
+            {% endfor %}
+        </ul>
+    </nav>
+    {% endblock -%}
+    <footer>
+        <p>&copy; 2023</p>
+    </footer>
+</body>
+</html>
