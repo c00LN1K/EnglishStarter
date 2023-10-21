@@ -1,12 +1,12 @@
 import os
 import random
-
+import sqlite3
 from flask import Flask, render_template, request, flash, redirect, url_for
 from flask_login import LoginManager, current_user, login_required, login_user
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import RegisterForm, LoginForm
-
+from googletrans import Translator
 from db import db
 
 # Конфигурация
@@ -89,10 +89,49 @@ def exercise():
     word = dct[key]
     return render_template('exercise.html', word=word, answer=key)
 
-
-@app.route('/dictionary')
+# Функция для получения случайного слова из БД
+def get_random_word():
+    conn = sqlite3.connect('word.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT word, rating FROM your_table_name WHERE rating = 0 ORDER BY RANDOM() LIMIT 1")
+    word, rating = cursor.fetchone()
+    conn.close()
+    return word, rating
+# Функция для перевода слова на русский
+def translate_to_russian(word):
+    translator = Translator()
+    translation = translator.translate(word, src='en', dest='ru')
+    return translation.text
+@app.route('/dictionary', methods =['POST','GET'])
 def dictionary():
-    return render_template('dictionary.html')
+
+    word, rating = get_random_word()
+    if request.method == 'POST':
+        translation = request.form['translation']
+        word1 = word
+
+        conn = sqlite3.connect('word.db')
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT rating FROM your_table_name WHERE word = ?", (word1,))
+        current_rating = cursor.fetchone()[0]
+
+        if translation == translate_to_russian(word1):
+
+            updated_rating = current_rating + 1
+            print(1)
+        else:
+            updated_rating = current_rating - 5
+            print(2)
+        print(translation, translate_to_russian(word))
+        cursor.execute("UPDATE your_table_name SET rating = ? WHERE word = ?", (updated_rating, word))
+        conn.commit()
+        conn.close()
+    else:
+        updated_rating = rating
+
+
+    return render_template('dictionary.html', word=word, rating=rating)
 
 
 @app.route('/register', methods=['POST', 'GET'])
