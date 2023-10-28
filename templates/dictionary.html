@@ -1,18 +1,28 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Translate English to Russian</title>
-</head>
-<body>
-    <h1>Translate the word:</h1>
+{% extends 'base.html' %}
+
+{% block content %}
+{{super()}}
+ {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <ul class="flash-messages">
+                {% for message in messages %}
+                    <li>{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+
+<h1>Translate the word:</h1>
     <h2>{{ word }}</h2>
 
     <form method="POST" action="/dictionary">
         <label for="translation">Enter Russian translation:</label>
-        <input type="text" name="translation" id="translation" required>
-        <input type="submit" value="Check">
+        <input type="text" name="translation" id="translation">
+        <button type="submit" name="dk">Don't know</button>
+        <button type="submit" name="ch">Check</button>
     </form>
 
     <p>Rating: {{ rating }}</p>
-</body>
-</html>
+{% endblock %}
+
+

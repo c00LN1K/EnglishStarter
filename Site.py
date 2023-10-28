@@ -1,13 +1,13 @@
 import os
 import random
 import sqlite3
-from flask import Flask, render_template, request, flash, redirect, url_for
+from flask import Flask, render_template, request, flash, redirect, url_for, session
 from flask_login import LoginManager, current_user, login_required, login_user
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import RegisterForm, LoginForm
 from googletrans import Translator
-from db import db
+from DBModels import db, Word
 
 # Конфигурация
 DEBUG = True
@@ -18,7 +18,6 @@ SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 app = Flask(__name__)
 app.config.from_object(__name__)
-
 
 db.init_app(app)
 
@@ -74,10 +73,6 @@ def lessons():
 @app.route('/exercise', methods=['POST', 'GET'])
 @login_required
 def exercise():
-    if current_user.is_authenticated:
-        flash('Вы уже вошли в свой профиль')
-        return redirect(url_for('profile'))
-
     if request.method == 'POST':
         answer = request.form.get('answer')
         word = request.form.get('word')
@@ -89,48 +84,56 @@ def exercise():
     word = dct[key]
     return render_template('exercise.html', word=word, answer=key)
 
+
 # Функция для получения случайного слова из БД
 def get_random_word():
-    conn = sqlite3.connect('word.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT word, rating FROM your_table_name WHERE rating = 0 ORDER BY RANDOM() LIMIT 1")
-    word, rating = cursor.fetchone()
-    conn.close()
-    return word, rating
+    return random.choice(Word.query.all()).value
+
+
 # Функция для перевода слова на русский
 def translate_to_russian(word):
     translator = Translator()
     translation = translator.translate(word, src='en', dest='ru')
     return translation.text
-current_word = None
+
+
 @app.route('/dictionary', methods=['POST', 'GET'])
 def dictionary():
-    global current_word
+    flag = 'dk' in request.form
 
-    if request.method == 'POST':
-        translation = request.form['translation']
-        if current_word:
-            word1 = current_word
-            conn = sqlite3.connect('word.db')
-            cursor = conn.cursor()
-            cursor.execute("SELECT rating FROM your_table_name WHERE word = ?", (word1,))
-            current_rating = cursor.fetchone()[0]
-            print(translation,translate_to_russian(word1))
-            if translation == translate_to_russian(word1):
-                updated_rating = current_rating + 1
-            else:
-                updated_rating = current_rating - 5
+    if request.method == 'POST' and 'ch' in request.form:
+        translation = request.form['translation'].title()
+        print(translation)
+        current_word = session['current_word']
+        print(translation, translate_to_russian(current_word))
+        if current_word and translation == translate_to_russian(current_word).title():
+            flash(f"Nicecook - {translation}", category='success')
+        else:
+            flag = 1
 
-            cursor.execute("UPDATE your_table_name SET rating = ? WHERE word = ?", (updated_rating, word1))
-            conn.commit()
-            conn.close()
+    if flag:
+        flash(f'Ну ты лох!) - {translate_to_russian(session["current_word"]).title()}', category='failed')
+        if current_user.is_authenticated:
+            try:
+                id_word = Word.query.filter_by(value=session['current_word']).first().id
+                pole = Pole.query.filter_by(word_id=id_word).first()
+                if pole:
+                    pole.rating -= 5
+                else:
+                    p = Pole(user_id=current_user.id, word_id=id_word, rating=0)
+                    db.session.add(p)
+                    db.session.flush()
+                    db.session.commit()
 
-        current_word, rating = get_random_word()
-    else:
-        if not current_word:
-            current_word, rating = get_random_word()
+            except Exception as ex:
+                db.session.rollback()
+                flash('Ошибка')
+                print('Ошибка - ', ex)
 
-    return render_template('dictionary.html', word=current_word)
+    session['current_word'] = get_random_word()
+    return render_template('dictionary.html', word=session['current_word'], menu=menu)
+
+
 @app.route('/register', methods=['POST', 'GET'])
 def register():
     form = RegisterForm()
@@ -172,7 +175,7 @@ def login():
     form = LoginForm()
     # Нужно ли проверять запрос на POST?
     if form.validate_on_submit():
-        # Realization checking data and entering
+        # Realization \ing data and entering
         user = Users.query.filter_by(email=form.email.data).first()
 
         if user and check_password_hash(user.psw, form.password.data):
@@ -190,10 +193,10 @@ def profile():
 
 @login_manager.user_loader
 def load_user(user_id):
-    return Users.query.get(int(user_id))
+    return db.session.get(Users, user_id)
 
 
 if __name__ == '__main__':
-    from DBModels import Users, Profiles
+    from DBModels import Users, Profiles, Pole
 
     app.run(debug=True)

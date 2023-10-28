@@ -2,12 +2,27 @@ from datetime import datetime
 
 from flask_login import UserMixin
 
-from db import db
+
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
 
 
-# создание бд
+# # создание бд
 # with app.app_context():
 #     db.create_all()
+
+
+class Word(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    value = db.Column(db.String(100), unique=True)
+
+
+class Pole(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    word_id = db.Column(db.Integer, db.ForeignKey('word.id'))
+    rating = db.Column(db.Integer)
 
 
 class Users(UserMixin, db.Model):
@@ -30,7 +45,6 @@ class Profiles(db.Model):
     old = db.Column(db.Integer)
 
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-
 
     def __repr__(self):
         return f'<profiles {self.id}>'
