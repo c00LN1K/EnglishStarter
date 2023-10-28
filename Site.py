@@ -102,38 +102,35 @@ def translate_to_russian(word):
     translator = Translator()
     translation = translator.translate(word, src='en', dest='ru')
     return translation.text
-@app.route('/dictionary', methods =['POST','GET'])
+current_word = None
+@app.route('/dictionary', methods=['POST', 'GET'])
 def dictionary():
+    global current_word
 
-    word, rating = get_random_word()
     if request.method == 'POST':
         translation = request.form['translation']
-        word1 = word
+        if current_word:
+            word1 = current_word
+            conn = sqlite3.connect('word.db')
+            cursor = conn.cursor()
+            cursor.execute("SELECT rating FROM your_table_name WHERE word = ?", (word1,))
+            current_rating = cursor.fetchone()[0]
+            print(translation,translate_to_russian(word1))
+            if translation == translate_to_russian(word1):
+                updated_rating = current_rating + 1
+            else:
+                updated_rating = current_rating - 5
 
-        conn = sqlite3.connect('word.db')
-        cursor = conn.cursor()
+            cursor.execute("UPDATE your_table_name SET rating = ? WHERE word = ?", (updated_rating, word1))
+            conn.commit()
+            conn.close()
 
-        cursor.execute("SELECT rating FROM your_table_name WHERE word = ?", (word1,))
-        current_rating = cursor.fetchone()[0]
-
-        if translation == translate_to_russian(word1):
-
-            updated_rating = current_rating + 1
-            print(1)
-        else:
-            updated_rating = current_rating - 5
-            print(2)
-        print(translation, translate_to_russian(word))
-        cursor.execute("UPDATE your_table_name SET rating = ? WHERE word = ?", (updated_rating, word))
-        conn.commit()
-        conn.close()
+        current_word, rating = get_random_word()
     else:
-        updated_rating = rating
+        if not current_word:
+            current_word, rating = get_random_word()
 
-
-    return render_template('dictionary.html', word=word, rating=rating)
-
-
+    return render_template('dictionary.html', word=current_word)
 @app.route('/register', methods=['POST', 'GET'])
 def register():
     form = RegisterForm()
