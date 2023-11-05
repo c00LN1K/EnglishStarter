@@ -2,8 +2,19 @@
 
 {% block content %}
 {{super()}}
+ {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <ul class="flash-messages">
+                {% for message in messages %}
+                    <li>{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+
+
   <h1>Отправка слова</h1>
-    <form method="POST" action="/">
+    <form method="POST" action="">
         <label for="word">Слово:</label>
         <input type="text" id="word" name="word" required>
         <input type="submit" value="Отправить">

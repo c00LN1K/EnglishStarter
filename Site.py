@@ -36,29 +36,6 @@ menu = [
 
 ]
 
-dct = {
-    "apple": "яблоко",
-    "book": "книга",
-    "car": "машина",
-    "dog": "собака",
-    "cat": "кошка",
-    "house": "дом",
-    "tree": "дерево",
-    "computer": "компьютер",
-    "friend": "друг",
-    "family": "семья",
-    "school": "школа",
-    "pen": "ручка",
-    "pencil": "карандаш",
-    "sun": "солнце",
-    "moon": "луна",
-    "flower": "цветок",
-    "water": "вода",
-    "air": "воздух",
-    "food": "пища",
-    "music": "музыка"
-}
-
 
 @app.route('/')
 def index():
@@ -130,28 +107,33 @@ def translate_to_russian(word):
 @login_required
 def dictionary():
     if request.method == 'POST':
-        word = request.form['word']
+        word = request.form['word'].lower()
         print("Received word:", word)
-        if word in Word.query.filter_by(value=word).first():
+        if Word.query.filter_by(value=word).first():
             word_id = Word.query.filter_by(value=word).first().id
             print("Word ID:", word_id)
-            p =Pole(user_id=current_user.id, word_id=word_id, rating=0, is_him =True)
-            db.session.add(p)
-            db.session.commit()
-            flash('Ваше слово добавлено 1')
+            if Pole.query.filter_by(word_id=word_id).first():
+                flash('This word has already in your dictionary')
+            else:
+                p = Pole(user_id=current_user.id, word_id=word_id, rating=0, is_him=True)
+                db.session.add(p)
+                db.session.commit()
+                flash('Ваше слово добавлено 1')
         else:
             w = Word(value=word)
             db.session.add(w)
             db.session.commit()
             word_id = Word.query.filter_by(value=word).first().id
             print("Word ID:", word_id)
-            p =Pole(user_id=current_user.id, word_id=word_id, rating=0, is_him =True)
-            db.session.add(p)
-            db.session.commit()
-            flash('Ваше слово лобавлено 2')
+            if Pole.query.filter_by(word_id=word_id).first():
+                flash('This word has already in your dictionary')
+            else:
+                p = Pole(user_id=current_user.id, word_id=word_id, rating=0, is_him=True)
+                db.session.add(p)
+                db.session.commit()
+                flash('Ваше слово лобавлено 2')
 
-
-    return render_template('dictionary.html',  menu=menu)
+    return render_template('dictionary.html', menu=menu)
 
 
 @app.route('/register', methods=['POST', 'GET'])
@@ -208,7 +190,8 @@ def login():
 
 @app.route('/profile')
 def profile():
-    return render_template('index.html')
+    flash('Вы в профиле')
+    return render_template('index.html', menu=menu)
 
 
 @login_manager.user_loader
