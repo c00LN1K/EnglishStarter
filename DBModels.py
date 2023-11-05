@@ -23,7 +23,7 @@ class Pole(UserMixin, db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     word_id = db.Column(db.Integer, db.ForeignKey('word.id'))
     rating = db.Column(db.Integer)
-
+    is_him = db.Column(db.Boolean, default=False)
 
 class Users(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)

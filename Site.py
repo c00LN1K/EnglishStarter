@@ -129,7 +129,29 @@ def translate_to_russian(word):
 @app.route('/dictionary', methods=['POST', 'GET'])
 @login_required
 def dictionary():
-    return render_template('dictionary.html', word=session['current_word'], menu=menu)
+    if request.method == 'POST':
+        word = request.form['word']
+        print("Received word:", word)
+        if word in Word.query.filter_by(value=word).first():
+            word_id = Word.query.filter_by(value=word).first().id
+            print("Word ID:", word_id)
+            p =Pole(user_id=current_user.id, word_id=word_id, rating=0, is_him =True)
+            db.session.add(p)
+            db.session.commit()
+            flash('Ваше слово добавлено 1')
+        else:
+            w = Word(value=word)
+            db.session.add(w)
+            db.session.commit()
+            word_id = Word.query.filter_by(value=word).first().id
+            print("Word ID:", word_id)
+            p =Pole(user_id=current_user.id, word_id=word_id, rating=0, is_him =True)
+            db.session.add(p)
+            db.session.commit()
+            flash('Ваше слово лобавлено 2')
+
+
+    return render_template('dictionary.html',  menu=menu)
 
 
 @app.route('/register', methods=['POST', 'GET'])
@@ -186,7 +208,7 @@ def login():
 
 @app.route('/profile')
 def profile():
-    return 'Profile'
+    return render_template('index.html')
 
 
 @login_manager.user_loader
