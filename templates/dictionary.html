@@ -2,7 +2,15 @@
 
 {% block content %}
 {{super()}}
- {% with messages = get_flashed_messages() %}
+<h2>Переведите слово на английский:</h2>
+    <p>{{ word.capitalize() }}</p>
+    <form action="/exercise" method="post">
+        <label for="answer">Ваш ответ:</label>
+        <input type="text" id="answer" name="answer" required>
+        <input type="hidden" name="word" value="{{ answer }}">
+        <button type="submit">Проверить</button>
+    </form>
+    {% with messages = get_flashed_messages() %}
         {% if messages %}
             <ul class="flash-messages">
                 {% for message in messages %}
@@ -11,18 +19,4 @@
             </ul>
         {% endif %}
     {% endwith %}
-
-<h1>Translate the word:</h1>
-    <h2>{{ word }}</h2>
-
-    <form method="POST" action="/dictionary">
-        <label for="translation">Enter Russian translation:</label>
-        <input type="text" name="translation" id="translation">
-        <button type="submit" name="dk">Don't know</button>
-        <button type="submit" name="ch">Check</button>
-    </form>
-
-    <p>Rating: {{ rating }}</p>
 {% endblock %}
-
-

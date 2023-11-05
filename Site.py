@@ -71,18 +71,47 @@ def lessons():
 
 
 @app.route('/exercise', methods=['POST', 'GET'])
-@login_required
 def exercise():
-    if request.method == 'POST':
-        answer = request.form.get('answer')
-        word = request.form.get('word')
-        if word.lower() == answer.lower():
-            flash("Well done!")
+    flag = 'dk' in request.form
+
+    if request.method == 'POST' and 'ch' in request.form:
+        translation = request.form['translation'].title()
+        print(translation)
+        current_word = session['current_word']
+        print(translation, translate_to_russian(current_word))
+        if current_word and translation == translate_to_russian(current_word).title():
+            flash(f"Nicecook - {translation}", category='success')
         else:
-            flash(f"Wrong answer! The correct answer - {word}")
-    key = random.choice(list(dct.keys()))
-    word = dct[key]
-    return render_template('exercise.html', word=word, answer=key)
+            flag = 1
+    print(flag)
+    if flag:
+        if current_user.is_authenticated:
+            try:
+                id_word = Word.query.filter_by(value=session['current_word']).first().id
+                pole = Pole.query.filter_by(word_id=id_word).first()
+                if pole:
+                    flash(f'Ну ты лох!) - {translate_to_russian(session["current_word"]).title()}', category='failed')
+                    pole.rating -= 5
+                else:
+                    print('Dont know')
+                    flash(
+                        f'{session["current_word"].title()} - {translate_to_russian(session["current_word"]).title()}',
+                        category='failed')
+                    p = Pole(user_id=current_user.id, word_id=id_word, rating=0)
+                    db.session.add(p)
+                db.session.flush()
+                db.session.commit()
+
+            except Exception as ex:
+                db.session.rollback()
+                flash('Ошибка')
+                print('Ошибка - ', ex)
+        else:
+            flash(
+                f'{session["current_word"].title()} - {translate_to_russian(session["current_word"]).title()}',
+                category='failed')
+    session['current_word'] = get_random_word()
+    return render_template('exercise.html', word=session['current_word'], menu=menu)
 
 
 # Функция для получения случайного слова из БД
@@ -98,39 +127,8 @@ def translate_to_russian(word):
 
 
 @app.route('/dictionary', methods=['POST', 'GET'])
+@login_required
 def dictionary():
-    flag = 'dk' in request.form
-
-    if request.method == 'POST' and 'ch' in request.form:
-        translation = request.form['translation'].title()
-        print(translation)
-        current_word = session['current_word']
-        print(translation, translate_to_russian(current_word))
-        if current_word and translation == translate_to_russian(current_word).title():
-            flash(f"Nicecook - {translation}", category='success')
-        else:
-            flag = 1
-
-    if flag:
-        flash(f'Ну ты лох!) - {translate_to_russian(session["current_word"]).title()}', category='failed')
-        if current_user.is_authenticated:
-            try:
-                id_word = Word.query.filter_by(value=session['current_word']).first().id
-                pole = Pole.query.filter_by(word_id=id_word).first()
-                if pole:
-                    pole.rating -= 5
-                else:
-                    p = Pole(user_id=current_user.id, word_id=id_word, rating=0)
-                    db.session.add(p)
-                    db.session.flush()
-                    db.session.commit()
-
-            except Exception as ex:
-                db.session.rollback()
-                flash('Ошибка')
-                print('Ошибка - ', ex)
-
-    session['current_word'] = get_random_word()
     return render_template('dictionary.html', word=session['current_word'], menu=menu)
 
 
