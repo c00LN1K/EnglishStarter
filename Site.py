@@ -21,6 +21,8 @@ app.config.from_object(__name__)
 
 db.init_app(app)
 
+app.jinja_env.filters['zip'] = zip
+
 login_manager = LoginManager()
 login_manager.login_view = 'login'
 login_manager.login_message = 'Для просмотра страницы авторизуйтесь'
@@ -29,11 +31,9 @@ login_manager.init_app(app)
 
 menu = [
     {'url': 'index', 'title': 'Главная страница'},
-    {'url': 'lessons', 'title': 'Уроки'},
-    {'url': 'exercise', 'title': 'Упражнения'},
-    {'url': 'dictionary', 'title': 'Словарь'},
-    {'url': 'login', 'title': 'Авторизация'}
-
+    {'url': 'exercise', 'title': 'Тренировка'},
+    {'url': 'dictionary', 'title': 'Мой словарь'},
+    {'url': 'profile', 'title': 'Профиль'}
 ]
 
 
@@ -42,53 +42,55 @@ def index():
     return render_template('index.html', menu=menu, title='Главная страница')
 
 
-@app.route('/lessons')
-def lessons():
-    return render_template('lessons.html')
-
-
 @app.route('/exercise', methods=['POST', 'GET'])
 def exercise():
-    flag = 'dk' in request.form
+    if not current_user.is_authenticated:
+        flash('Похоже вы не авторизованы. Ваш прогресс не будет сохранен(')
+    if request.method == 'POST':
+        is_add = request.form.get('add')
+        print(is_add)
+        if is_add:
+            try:
+                id_word = Word.query.filter_by(value=session['last_word']).first().id
+                p = Pole(user_id=current_user.id, word_id=id_word, rating=0)
+                db.session.add(p)
+                db.session.flush()
+                db.session.commit()
+                print('Слово успешно добавлено в Post')
+            except Exception as ex:
+                print('Ошибка при добавлении слова в Post')
+                print(ex)
+                db.session.rollback()
 
-    if request.method == 'POST' and 'ch' in request.form:
         translation = request.form['translation'].title()
         print(translation)
         current_word = session['current_word']
         print(translation, translate_to_russian(current_word))
         if current_word and translation == translate_to_russian(current_word).title():
             flash(f"Nicecook - {translation}", category='success')
+            session['last_word'] = None
         else:
-            flag = 1
-    print(flag)
-    if flag:
-        if current_user.is_authenticated:
-            try:
+            if not current_user.is_authenticated:
+                flash(
+                    f'{session["current_word"].title()} - {translate_to_russian(session["current_word"]).title()}',
+                    category='failed')
+            else:
                 id_word = Word.query.filter_by(value=session['current_word']).first().id
                 pole = Pole.query.filter_by(word_id=id_word).first()
                 if pole:
                     flash(f'Ну ты лох!) - {translate_to_russian(session["current_word"]).title()}', category='failed')
                     pole.rating -= 5
+                    session['last_word'] = None
                 else:
-                    print('Dont know')
                     flash(
                         f'{session["current_word"].title()} - {translate_to_russian(session["current_word"]).title()}',
                         category='failed')
-                    p = Pole(user_id=current_user.id, word_id=id_word, rating=0)
-                    db.session.add(p)
-                db.session.flush()
-                db.session.commit()
-
-            except Exception as ex:
-                db.session.rollback()
-                flash('Ошибка')
-                print('Ошибка - ', ex)
-        else:
-            flash(
-                f'{session["current_word"].title()} - {translate_to_russian(session["current_word"]).title()}',
-                category='failed')
+                    session['last_word'] = current_word
+    else:
+        session['last_word'] = None
     session['current_word'] = get_random_word()
-    return render_template('exercise.html', word=session['current_word'], menu=menu)
+    return render_template('exercise.html', word=session['current_word'], menu=menu, last_word=session['last_word'],
+                           title='Тренировка')
 
 
 # Функция для получения случайного слова из БД
@@ -109,31 +111,20 @@ def dictionary():
     if request.method == 'POST':
         word = request.form['word'].lower()
         print("Received word:", word)
-        if Word.query.filter_by(value=word).first():
-            word_id = Word.query.filter_by(value=word).first().id
-            print("Word ID:", word_id)
-            if Pole.query.filter_by(word_id=word_id).first():
-                flash('This word has already in your dictionary')
-            else:
-                p = Pole(user_id=current_user.id, word_id=word_id, rating=0, is_him=True)
-                db.session.add(p)
-                db.session.commit()
-                flash('Ваше слово добавлено 1')
-        else:
-            w = Word(value=word)
-            db.session.add(w)
-            db.session.commit()
-            word_id = Word.query.filter_by(value=word).first().id
-            print("Word ID:", word_id)
-            if Pole.query.filter_by(word_id=word_id).first():
-                flash('This word has already in your dictionary')
-            else:
-                p = Pole(user_id=current_user.id, word_id=word_id, rating=0, is_him=True)
-                db.session.add(p)
-                db.session.commit()
-                flash('Ваше слово лобавлено 2')
+        Pole.add_word(word, current_user.id)
 
-    return render_template('dictionary.html', menu=menu)
+    records = Pole.get_words(current_user.id)
+    words = []
+    for rec in records:
+        word = Word.query.get(rec.word_id).value
+        words.append({
+            'name': word,
+            'translate': translate_to_russian(word),
+            'rating': rec.rating,
+            'is_him': bool(rec.is_him),
+        })
+
+    return render_template('dictionary.html', menu=menu, title='Мой словарь', words=words, zip=zip)
 
 
 @app.route('/register', methods=['POST', 'GET'])
@@ -182,6 +173,7 @@ def login():
 
         if user and check_password_hash(user.psw, form.password.data):
             login_user(user, remember=form.remember.data)
+            flash("Успешый вход")
             return redirect(url_for('profile'))
         else:
             flash('Неверный логин или пароль или такого пользователя не существует')
@@ -189,9 +181,11 @@ def login():
 
 
 @app.route('/profile')
+@login_required
 def profile():
-    flash('Вы в профиле')
-    return render_template('index.html', menu=menu)
+    prof = Profiles.get_profile(current_user.id)
+    num_words = Pole.query.filter_by(user_id=current_user.id).count()
+    return render_template('profile.html', menu=menu, title='Профиль', profile=prof, num_words=num_words)
 
 
 @login_manager.user_loader
@@ -202,4 +196,4 @@ def load_user(user_id):
 if __name__ == '__main__':
     from DBModels import Users, Profiles, Pole
 
-    app.run(debug=True)
+    app.run(debug=True, port=7000)

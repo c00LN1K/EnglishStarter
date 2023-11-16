@@ -13,11 +13,45 @@
     {% endwith %}
 
 
-  <h1>Отправка слова</h1>
+  <h1>Добавить слово</h1>
     <form method="POST" action="">
         <label for="word">Слово:</label>
         <input type="text" id="word" name="word" required>
         <input type="submit" value="Отправить">
     </form>
+<hr>
+{% if words %}
+<table>
+    <thead>
+        <tr>
+            <td>Слово</td>
+            <td>Перевод</td>
+            <td>Рейтинг</td>
+            <td>Свое слово</td>
+        </tr>
+    </thead>
+
+{% for word in words %}
+<tr>
+    <td>{{word.name}}</td>
+    <td>{{word.translate}}</td>
+    <td>{{word.rating}}</td>
+    {% if word.is_him %}
+    <td>Да</td>
+    {% else %}
+    <td>Нет</td>
+    {% endif %}
+</tr>
+
+
+
+
+{% endfor %}
+</table>
+
+{% else %}
+<h2>Похоже в вашем словаре пока нет слов. Самое время это исправить!</h2>
+
+{% endif %}
 
 {% endblock %}

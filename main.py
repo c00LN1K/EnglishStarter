@@ -7,7 +7,7 @@ words = file.readlines()
 
 for word in words:
     with app.app_context():
-        w = Word(value=word)
+        w = Word(value=word.strip())
         db.session.add(w)
         db.session.flush()
         db.session.commit()

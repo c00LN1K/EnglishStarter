@@ -2,28 +2,35 @@
 
 {% block content %}
 {{super()}}
- {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            <ul class="flash-messages">
-                {% for message in messages %}
-                    <li>{{ message }}</li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-    {% endwith %}
+
 
 
 <h1>Translate the word:</h1>
     <h2>{{ word }}</h2>
 
     <form method="POST" action="">
+
         <label for="translation">Enter Russian translation:</label>
         <input type="text" name="translation" id="translation">
         <button type="submit" name="dk">Don't know</button>
         <button type="submit" name="ch">Check</button>
-    </form>
 
-    <p>Rating: {{ rating }}</p>
+        <hr>
+
+        {% if last_word %}
+            <h3>Don't know this word? Do u want to add this word to your dictionary?</h3>
+            <p><input type="checkbox" name="add" checked>{{ last_word }}</p>
+        {% endif %}
+        {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                <ul class="flash-messages">
+                    {% for message in messages %}
+                        <li>{{ message }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            {% endwith %}
+    </form>
 {% endblock %}
 
 
