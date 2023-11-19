@@ -1,13 +1,13 @@
 import os
 import random
 import sqlite3
-from flask import Flask, render_template, request, flash, redirect, url_for, session
-from flask_login import LoginManager, current_user, login_required, login_user
+from flask import Flask, render_template, request, flash, redirect, url_for, session, make_response
+from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import RegisterForm, LoginForm
 from googletrans import Translator
-from DBModels import db, Word
+from DBModels import db, Word, Image
 
 # Конфигурация
 DEBUG = True
@@ -57,8 +57,10 @@ def exercise():
                 db.session.flush()
                 db.session.commit()
                 print('Слово успешно добавлено в Post')
+                flash(f'Слово {session["last_word"]} успешно добавлено в ваш словарь!', category='success')
             except Exception as ex:
                 print('Ошибка при добавлении слова в Post')
+                flash('Ошибка при добавлении слова', category='failed')
                 print(ex)
                 db.session.rollback()
 
@@ -173,14 +175,14 @@ def login():
 
         if user and check_password_hash(user.psw, form.password.data):
             login_user(user, remember=form.remember.data)
-            flash("Успешый вход")
+            # flash("Успешый вход")
             return redirect(url_for('profile'))
         else:
             flash('Неверный логин или пароль или такого пользователя не существует')
     return render_template('login.html', title='Авторизация', form=form)
 
 
-@app.route('/profile')
+@app.route('/profile', methods=['POST', 'GET'])
 @login_required
 def profile():
     prof = Profiles.get_profile(current_user.id)
@@ -188,9 +190,63 @@ def profile():
     return render_template('profile.html', menu=menu, title='Профиль', profile=prof, num_words=num_words)
 
 
+@app.route('/delete_word', methods=["POST", "GET"])
+@login_required
+def delete_word():
+    print(request.form)
+    if request.method == 'POST':
+        if request.form.get('word'):
+            word = request.form['word']
+            word_id = Word.query.filter_by(value=word).first().id
+            Pole.query.filter_by(user_id=current_user.id, word_id=word_id).delete()
+            db.session.commit()
+            flash(f'Слово {word} успешно удалено из вашего словаря', category='success')
+    return redirect(url_for('dictionary'))
+
+
+@app.route('/upload', methods=['POST', 'GET'])
+def upload():
+    if request.method == 'POST':
+        file = request.files['image']
+        if file:
+            try:
+                img = Image(img=file.read(), user_id=current_user.id, mimetype=file.mimetype)
+                db.session.add(img)
+                db.session.flush()
+                db.session.commit()
+                flash("Изображение успешно добавлено", category='success')
+            except Exception as ex:
+                print("Ошибка при загрузке изображения -", ex)
+                flash('Ошибка при добавлении изображения. Попробуйте позже.', category='failed')
+
+    return redirect(url_for('profile'))
+
+
+@app.route('/get_image')
+def get_image():
+    image = Image.query.filter_by(user_id=current_user.id).first()
+    if not image:
+        # TODO: получение стандартного изображения должно быть из static
+        with app.open_resource(app.root_path + url_for('static', filename='media/default.jpg')) as f:
+            image = f.read()
+            resp = make_response(image)
+        resp.headers['Content-Type'] = 'image/jpg'
+    else:
+        resp = make_response(image.img)
+        resp.headers['Content-Type'] = image.mimetype
+    return resp
+
+
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(Users, user_id)
+
+
+@app.route('/logout', methods=['POST', 'GET'])
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
 
 
 if __name__ == '__main__':

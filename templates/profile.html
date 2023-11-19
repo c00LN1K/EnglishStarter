@@ -2,15 +2,22 @@
 
 {% block content %}
 {{super()}}
- {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            <ul class="flash-messages">
-                {% for message in messages %}
-                    <li>{{ message }}</li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-    {% endwith %}
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+<ul class="flash-messages">
+    {% for message in messages %}
+    <li>{{ message }}</li>
+    {% endfor %}
+</ul>
+{% endif %}
+{% endwith %}
+
+<div><img src="{{ url_for('get_image') }}"></div>
+
+<form enctype="multipart/form-data" method="POST" action="{{url_for('upload')}}">
+    <input type="file" name="image">
+    <button type="submit">Загрузить</button>
+</form>
 
 <h2>Имя: {{profile.name}}</h2>
 {% if profile.old %}
@@ -18,6 +25,9 @@
 {% endif %}
 <h3>Слов в вашем <a href="{{url_for('dictionary')}}"> словаре</a>: {{ num_words }}</h3>
 
+<form method="POST" action="{{url_for('logout')}}">
+    <button type="submit">Выход</button>
 
+</form>
 
 {% endblock %}

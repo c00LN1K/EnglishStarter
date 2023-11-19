@@ -6,20 +6,31 @@
     {% else %}
     <title>Site</title>
     {% endif %}
+
+    <style>
+    img {
+    border: 2px solid blue;
+    overflow: hidden;
+    width: 300px;
+    }
+
+    </style>
+
+
 </head>
 <body>
-    <h1>{{title}}</h1>
-    {% block content -%}
-    <nav>
-        <ul>
-            {% for item in menu %}
-            <li><a href="{{url_for(item.url)}}">{{item.title}}</a></li>
-            {% endfor %}
-        </ul>
-    </nav>
-    {% endblock -%}
-    <footer>
-        <p>&copy; 2023</p>
-    </footer>
+<h1>{{title}}</h1>
+{% block content -%}
+<nav>
+    <ul>
+        {% for item in menu %}
+        <li><a href="{{url_for(item.url)}}">{{item.title}}</a></li>
+        {% endfor %}
+    </ul>
+</nav>
+{% endblock -%}
+<footer>
+    <p>&copy; 2023</p>
+</footer>
 </body>
 </html>

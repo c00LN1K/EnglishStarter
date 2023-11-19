@@ -93,3 +93,10 @@ class Profiles(db.Model):
 
     def __repr__(self):
         return f'<profiles {self.id}>'
+
+
+class Image(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    img = db.Column(db.Text, nullable=True)
+    mimetype = db.Column(db.Integer)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
