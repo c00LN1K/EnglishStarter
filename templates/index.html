@@ -2,5 +2,8 @@
 
 {% block content %}
 {{super()}}
-<h1>{{menu.title}}</h1>
+<h2>Добро пожаловать на главную страницу!</h2>
+<p><h3>Вы можете <a href="{{url_for('exercise')}}">начать тренировку</a>, <a href="{{url_for('profile')}}">войти в свой
+    профиль</a> или <a href="{{url_for('register')}}">зарегистрироваться</a>,
+    если у вас ещё нет аккаунта.</h3>
 {% endblock %}

@@ -7,9 +7,12 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import RegisterForm, LoginForm
 from googletrans import Translator
-from DBModels import db, Word, Image
+from DBModels import db, Word, Image, Users, Profiles, Pole
+from flask_caching import Cache
 
 # Конфигурация
+CACHE_TYPE = 'SimpleCache'
+CACHE_DEFAULT_TIMEOUT = 1800
 DEBUG = True
 SECRET_KEY = '4fc189e327ecca72'
 MAX_CONTENT_LENGTH = 1024 * 1024
@@ -29,6 +32,8 @@ login_manager.login_message = 'Для просмотра страницы авт
 login_manager.login_message_category = 'failed'
 login_manager.init_app(app)
 
+cache = Cache(app)
+
 menu = [
     {'url': 'index', 'title': 'Главная страница'},
     {'url': 'exercise', 'title': 'Тренировка'},
@@ -45,11 +50,10 @@ def index():
 @app.route('/exercise', methods=['POST', 'GET'])
 def exercise():
     if not current_user.is_authenticated:
-        flash('Похоже вы не авторизованы. Ваш прогресс не будет сохранен(')
+        flash(f'Похоже вы не авторизованы. Ваш прогресс не будет сохранен(')
     if request.method == 'POST':
         is_add = request.form.get('add')
-        print(is_add)
-        if is_add:
+        if is_add and session['last_word']:
             try:
                 id_word = Word.query.filter_by(value=session['last_word']).first().id
                 p = Pole(user_id=current_user.id, word_id=id_word, rating=0)
@@ -69,24 +73,19 @@ def exercise():
         current_word = session['current_word']
         print(translation, translate_to_russian(current_word))
         if current_word and translation == translate_to_russian(current_word).title():
-            flash(f"Nicecook - {translation}", category='success')
+            flash(f"Right - {translation}", category='success')
             session['last_word'] = None
         else:
-            if not current_user.is_authenticated:
-                flash(
-                    f'{session["current_word"].title()} - {translate_to_russian(session["current_word"]).title()}',
-                    category='failed')
-            else:
+            flash(
+                f'Wrong - {session["current_word"].title()} - {translate_to_russian(session["current_word"]).title()}',
+                category='failed')
+            if current_user.is_authenticated:
                 id_word = Word.query.filter_by(value=session['current_word']).first().id
                 pole = Pole.query.filter_by(word_id=id_word).first()
                 if pole:
-                    flash(f'Ну ты лох!) - {translate_to_russian(session["current_word"]).title()}', category='failed')
                     pole.rating -= 5
                     session['last_word'] = None
                 else:
-                    flash(
-                        f'{session["current_word"].title()} - {translate_to_russian(session["current_word"]).title()}',
-                        category='failed')
                     session['last_word'] = current_word
     else:
         session['last_word'] = None
@@ -95,12 +94,42 @@ def exercise():
                            title='Тренировка')
 
 
+@app.route('/practice', methods=['GET', 'POST'])
+@login_required
+def practice():
+    words = Pole.get_words(current_user.id)
+    if words:
+        word = words[random.randrange(words.count())]
+        word = Word.query.filter_by(id=word.word_id).first().value
+        return render_template('exercise.html', word=word, menu=menu,
+                           title='Тренировка')
+    else:
+        return redirect(url_for('exercise'))
+
+
 # Функция для получения случайного слова из БД
 def get_random_word():
     return random.choice(Word.query.all()).value
 
 
-# Функция для перевода слова на русский
+def get_word_translate(word):
+    user_id = current_user.id
+    cache_key = f'user_{user_id}_data'
+    data = cache.get(cache_key)
+
+    if data is None:
+        cache.add(cache_key, {}, timeout=1800)
+        data = cache.get(cache_key)
+    translate = data.get(word)
+
+    if translate is None:
+        translate = translate_to_russian(word)
+        data[word] = translate
+        cache.set(cache_key, data, timeout=1800)
+
+    return translate
+
+
 def translate_to_russian(word):
     translator = Translator()
     translation = translator.translate(word, src='en', dest='ru')
@@ -121,7 +150,7 @@ def dictionary():
         word = Word.query.get(rec.word_id).value
         words.append({
             'name': word,
-            'translate': translate_to_russian(word),
+            'translate': get_word_translate(word),
             'rating': rec.rating,
             'is_him': bool(rec.is_him),
         })
@@ -133,7 +162,6 @@ def dictionary():
 def register():
     form = RegisterForm()
     if form.validate_on_submit():
-        # Realization of addition user in db
         try:
             # Проверка на уже существующего пользователя
             user = Users.query.filter_by(email=form.email.data).first()
@@ -168,14 +196,11 @@ def login():
     if current_user.is_authenticated:
         return redirect('profile')
     form = LoginForm()
-    # Нужно ли проверять запрос на POST?
     if form.validate_on_submit():
-        # Realization \ing data and entering
         user = Users.query.filter_by(email=form.email.data).first()
 
         if user and check_password_hash(user.psw, form.password.data):
             login_user(user, remember=form.remember.data)
-            # flash("Успешый вход")
             return redirect(url_for('profile'))
         else:
             flash('Неверный логин или пароль или такого пользователя не существует')
@@ -226,7 +251,6 @@ def upload():
 def get_image():
     image = Image.query.filter_by(user_id=current_user.id).first()
     if not image:
-        # TODO: получение стандартного изображения должно быть из static
         with app.open_resource(app.root_path + url_for('static', filename='media/default.jpg')) as f:
             image = f.read()
             resp = make_response(image)
@@ -250,6 +274,4 @@ def logout():
 
 
 if __name__ == '__main__':
-    from DBModels import Users, Profiles, Pole
-
     app.run(debug=True, port=7000)

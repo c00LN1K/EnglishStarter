@@ -12,7 +12,7 @@
 {% endif %}
 {% endwith %}
 <h2>Имя: {{profile.name}}</h2>
-<div><img src="{{ url_for('get_image') }}"></div>
+<!--<div><img src="{{ url_for('get_image') }}"></div>-->
 
 <form enctype="multipart/form-data" method="POST" action="{{url_for('upload')}}">
     <input type="file" name="image">
@@ -23,7 +23,6 @@
 {% if profile.old %}
 <h3>Возраст:{{profile.old}}</h3>
 {% endif %}
-<h3>Слов в вашем <a href="{{url_for('dictionary')}}"> словаре</a>: {{ num_words }}</h3>
 
 <form method="POST" action="{{url_for('logout')}}">
     <button type="submit">Выход</button>

@@ -1,0 +1,79 @@
+img {
+    border: 2px solid blue;
+    overflow: hidden;
+    width: 300px;
+}
+
+nav {
+    margin: 10px 0;
+}
+
+nav ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+nav ul li {
+    display: inline;
+    margin-right: 10px;
+}
+
+
+footer {
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid #ccc;
+}
+
+
+.flash-messages {
+    list-style-type: none;
+    padding: 0;
+}
+
+.flash-messages li {
+    margin-bottom: 5px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    background-color: #f0f0f0;
+}
+
+form {
+    margin-top: 20px;
+}
+
+form input[type="file"] {
+    margin-right: 10px;
+}
+
+h2, h3 {
+    margin-top: 10px;
+}
+
+form p {
+    margin-top: 10px;
+}
+
+form button {
+    margin-top: 10px;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+form label {
+    display: block;
+    margin-top: 10px;
+}
+
+form h1 {
+    margin-top: 10px;
+}
+
+form h2 {
+    margin-top: 20px;
+}
+
+form hr {
+    margin-top: 20px;
+}
+
